@@ -35,13 +35,12 @@ All proofs are fully formalized and verified in Lean 4 with **zero `sorry` state
 ├── LICENSE                            # MIT License
 ├── lakefile.lean                      # Lean project configuration
 ├── lean-toolchain                     # Lean version specification
-├── src/
-│   ├── Sillari_refutation.lean       # Modal logic counterexamples
-│   ├── Cubitt_Sugden_baseline.lean   # Syntactic reconstruction
-│   └── Vromen_justification_logic.lean # Justification logic solution
+├── Sillari_refutation.lean            # Modal logic counterexamples
+├── Cubitt_Sugden_baseline.lean        # Syntactic reconstruction
+├── Vromen_justification_logic.lean    # Justification logic solution
 ├── pdfs/
-│   ├── sillari_refutation.pdf        # PDF version of the Lean file
-│   ├── cubitt_sugden_baseline.pdf    # PDF version of the Lean file
+│   ├── sillari_refutation.pdf         # PDF version of the Lean file
+│   ├── cubitt_sugden_baseline.pdf     # PDF version of the Lean file
 │   ├── vromen_justification_logic.pdf # PDF version of the Lean file
 │   └── Vromen_-_2024_-_Reasoning_with_reasons_Lewis_on_common_knowledge.pdf
 └── docs/
