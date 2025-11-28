@@ -22,3 +22,41 @@
 
 # Lake lock file (may want to commit this in some cases)
 lake-manifest.json
+
+# LaTeX files
+*.tex
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.nav
+*.snm
+*.vrb
+*.bcf
+*.run.xml
+
+# Python files
+*.py
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.Python
+venv/
+ENV/
+.venv
+*.ipynb_checkpoints
+
+# Shell scripts (except setup.sh which is needed)
+*.sh
+!setup.sh
