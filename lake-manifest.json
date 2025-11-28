@@ -1,12 +1,11 @@
 {"version": "1.1.0",
  "packagesDir": ".lake/packages",
  "packages":
- [{"url":
-   "file:///Users/huubvromen/nextcloud/Leanprojects/SharedMathlib/mathlib4",
+ [{"url": "https://github.com/leanprover-community/mathlib4.git",
    "type": "git",
    "subDir": null,
    "scope": "",
-   "rev": "5f59d4ede9239e86ab55064fd38b381cddc5a6d5",
+   "rev": "4eb9bc7aa8fa0750e90c05d945d0d78b6d7e7d1f",
    "name": "mathlib",
    "manifestFile": "lake-manifest.json",
    "inputRev": null,

@@ -4,7 +4,7 @@ open Lake DSL
 package Lewis
 
 require mathlib from git
-  "file:///Users/huubvromen/nextcloud/Leanprojects/SharedMathlib/mathlib4"
+  "https://github.com/leanprover-community/mathlib4.git"
 
 @[default_target]
 lean_lib Lewis
