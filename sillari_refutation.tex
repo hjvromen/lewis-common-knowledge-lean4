@@ -1,0 +1,1292 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{fontspec}
+\usepackage{unicode-math}
+\usepackage{minted}
+\usepackage{geometry}
+\usepackage{parskip}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+% Set fonts - Libertinus has excellent Unicode support and Times-like appearance
+\setmainfont{Libertinus Serif}
+\setmonofont{DejaVu Sans Mono}[Scale=0.85]
+\setmathfont{Libertinus Math}
+
+\geometry{margin=2.5cm}
+
+% Configure hyperlinks
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+% Configure minted for Lean code
+\setminted{
+    style=friendly
+}
+\setminted[lean4]{
+    fontsize=\small,
+    breaklines=true,
+    linenos=false,
+    bgcolor=gray!5,
+    frame=single,
+    framesep=2mm,
+    samepage=true
+}
+
+% Tighter lists
+\setlist{nosep}
+
+\title{Sillari Refutation}
+\author{Huub Vromen}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+import Mathlib.Tactic
+import Mathlib.Logic.Relation
+\end{minted}
+\end{minipage}
+
+\section*{Formal Analysis of Sillari's Modal Logic Approach to Lewis's Theory of Common Knowledge}
+
+
+This file demonstrates that Sillari's (2005) modal logic approach to Lewis's theory of common knowledge has fundamental limitations. We provide machine-verified counterexamples showing that key axioms fail and the proof of Lewis's theorem is either false or trivially true.
+
+
+\begin{quote}
+\textbf{Note:} This file explains \textit{why modal logic cannot capture Lewis's theory}. For the correct formalization, see Vromen (2024) using justification logic.
+\end{quote}
+
+
+---
+
+
+\subsection*{Overview}
+
+
+Sillari proposed formalizing Lewis's theory using Kripke semantics, defining "reason to believe" as a modal box operator and "indication" as a conjunction of reason to believe and material implication.
+
+
+This analysis shows these definitions are structurally inadequate for Lewis's theory.
+
+
+\subsubsection*{Main Results}
+
+
+\begin{enumerate}
+  \item \textbf{\texttt{B3} (Lewis's \texttt{A1}) fails} — Counterexample in \texttt{B3\_fails}
+  \item \textbf{\texttt{C4} (Cubitt-Sugden axiom) fails} — Counterexample in \texttt{C4\_fails}
+  \item \textbf{Lewis's theorem fails under local assumptions} — \texttt{Lewis\_fails\_1i}, \texttt{Lewis\_fails\_2i}
+  \item \textbf{Lewis's theorem is trivial under global assumptions} — \texttt{Lewis\_s\_2}
+\end{enumerate}
+
+\subsubsection*{The Root Problem}
+
+
+Lewis (1969, p. 52–53) defines indication counterfactually: "\textit{A indicates} to someone \textit{x} that \_\_\_ if and only if, if \textit{x} had reason to believe that \textit{A} held, \textit{x} would \textit{thereby} have reason to believe that \_\_\_."
+
+
+The word \textit{thereby} indicates that the reason for \texttt{p} \textit{depends on} the reason for \texttt{A}.
+
+
+Sillari's definition \texttt{Ind i φ ψ := R i φ ∧ (φ → ψ)} is merely a conjunction—it cannot capture this evidential dependence. The reason for \texttt{ψ} might be completely independent of the reason for \texttt{φ}.
+
+
+\subsubsection*{Comparison with Other Approaches}
+
+
+\begin{center}
+\begin{tabular}{llll}
+\hline
+Feature & Sillari (this file) & Cubitt-Sugden & Vromen \\
+\hline
+\textbf{R operator} & Modal □ & Primitive & ∃r. \texttt{rb r i φ} \\
+\textbf{Indication} & \texttt{R i φ ∧ (φ → ψ)} & Primitive & \texttt{R i (A → φ)} \\
+\textbf{A1 status} & \textbf{FAILS} $\times$ & Axiom & \textbf{THEOREM} $\checkmark$ \\
+\textbf{Lewis theorem} & False/Trivial $\times$ & Provable & \textbf{PROVEN} $\checkmark$ \\
+\hline
+\end{tabular}
+\end{center}
+
+
+\subsubsection*{References}
+
+
+\begin{itemize}
+  \item \textbf{Lewis, D. (1969).} \textit{Convention: A Philosophical Study.} Cambridge, MA: Harvard University Press.
+  \item \textbf{Sillari, G. (2005).} A logical framework for convention. \textit{Synthese, 147}, 379–400.
+  \item \textbf{Vromen, H. (2024).} Reasoning with reasons: Lewis on common knowledge. \textit{Economics \& Philosophy, 40}(2), 397–418.
+\end{itemize}
+
+\subsubsection*{File Structure}
+
+
+\begin{enumerate}
+  \item Kripke frame definitions
+  \item Modal operators (\texttt{R}, \texttt{Rg}, \texttt{Ind})
+  \item Common reason to believe (\texttt{CRB})
+  \item Axiom analysis (\texttt{B1}–\texttt{B11})
+  \item Critical failures (\texttt{B3}, \texttt{C4})
+  \item Lewis's theorem counterexamples
+\end{enumerate}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+namespace Sillari
+\end{minted}
+\end{minipage}
+
+---
+
+\subsection*{Section 1: Kripke Frame Structure}
+
+
+We define multi-agent Kripke frames with accessibility relations for each agent. This is the standard semantic framework for modal logic.
+
+
+\subsubsection*{Multi-Agent Frame}
+
+
+A Kripke frame consists of:
+
+\begin{itemize}
+  \item \texttt{World}: A type of possible worlds
+  \item \texttt{rel}: For each agent \texttt{i}, a binary relation on worlds (\texttt{rel i w v} means world \texttt{v} is accessible from world \texttt{w} for agent \texttt{i})
+\end{itemize}
+
+\textbf{Interpretation:} \texttt{rel i w v} means "from world \texttt{w}, agent \texttt{i} considers world \texttt{v} possible."
+
+
+\begin{itemize}
+  \item A Kripke frame with accessibility relations for multiple agents.
+\end{itemize}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+structure MultiAgentFrame (Agent : Type*) where
+  World : Type*
+  rel : Agent → World → World → Prop
+\end{minted}
+\end{minipage}
+
+---
+
+\subsection*{Section 2: Modal Operators}
+
+
+Standard definitions for modal implication, conjunction, and validity.
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+variable {Agent : Type*} {frame : MultiAgentFrame Agent}
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Modal Implication}
+
+
+\begin{quote}
+\textbf{\texttt{(φ ⟶ₘ ψ) w}} — "At world \texttt{w}, if \texttt{φ} holds then \texttt{ψ} holds"
+\end{quote}
+
+
+This is just the standard material implication lifted to the modal level.
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+def modal_imp (φ ψ : frame.World → Prop) : frame.World → Prop :=
+  fun w => φ w → ψ w
+infixr:90 " ⟶ₘ " => modal_imp
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Modal Conjunction}
+
+
+\begin{quote}
+\textbf{\texttt{(φ ∧ₘ ψ) w}} — "Both \texttt{φ} and \texttt{ψ} hold at world \texttt{w}"
+\end{quote}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+def modal_conj (φ ψ : frame.World → Prop) : frame.World → Prop :=
+  fun w => φ w ∧ ψ w
+infixr:70 " ∧ₘ " => modal_conj
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Validity}
+
+
+\begin{quote}
+\textbf{\texttt{⊢ φ}} — "Formula \texttt{φ} is valid (holds at all worlds)"
+\end{quote}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+def valid (φ : frame.World → Prop) : Prop := ∀ w, φ w
+notation "⊢ " φ => valid φ
+\end{minted}
+\end{minipage}
+
+---
+
+\subsection*{Section 3: Sillari's Core Definitions}
+
+
+These are the operators that define Sillari's approach. The key insight is that these definitions, while natural for standard epistemic logic, are inadequate for capturing Lewis's notion of indication.
+
+
+\subsubsection*{1. Reason to Believe (\texttt{R})}
+
+
+\begin{quote}
+\textbf{\texttt{R i φ w}} — "Agent \texttt{i} has reason to believe \texttt{φ} at world \texttt{w}"
+\end{quote}
+
+
+\textbf{Definition:} Agent \texttt{i} has reason to believe \texttt{φ} at world \texttt{w} if \texttt{φ} holds at all worlds accessible to \texttt{i} from \texttt{w}.
+
+
+This is the standard modal box operator \texttt{□ᵢ}.
+
+
+\textbf{Formal definition:}
+
+
+\begin{quote}
+\texttt{R i φ w := ∀ v, rel i w v → φ v}
+\end{quote}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+def R (i : Agent) (φ : frame.World → Prop) : frame.World → Prop :=
+  fun w => ∀ v, frame.rel i w v → φ v
+\end{minted}
+\end{minipage}
+
+\subsubsection*{2. Group Reason to Believe (\texttt{Rg})}
+
+
+\begin{quote}
+\textbf{\texttt{Rg φ w}} — "Everyone (all agents) has reason to believe \texttt{φ} at world \texttt{w}"
+\end{quote}
+
+
+\textbf{Formal definition:}
+
+
+\begin{quote}
+\texttt{Rg φ w := ∀ i, R i φ w}
+\end{quote}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+def Rg (φ : frame.World → Prop) : frame.World → Prop :=
+  fun w => ∀ i, R i φ w
+\end{minted}
+\end{minipage}
+
+\subsubsection*{3. Indication (\texttt{Ind})}
+
+
+\begin{quote}
+\textbf{\texttt{Ind i φ ψ w}} — "State of affairs \texttt{φ} indicates \texttt{ψ} to agent \texttt{i} at world \texttt{w}"
+\end{quote}
+
+
+This definition attempts to capture Lewis's idea that if \texttt{φ} indicates \texttt{ψ}, and you have reason to believe \texttt{φ}, then you \textit{thereby} have reason to believe \texttt{ψ}.
+
+
+\textbf{Formal definition:}
+
+
+\begin{quote}
+\texttt{Ind i φ ψ w := R i φ w ∧ (φ w → ψ w)}
+\end{quote}
+
+
+The conjunction has two parts:
+
+\begin{enumerate}
+  \item \texttt{R i φ w}: agent \texttt{i} has reason to believe \texttt{φ}
+  \item \texttt{(φ w → ψ w)}: \texttt{φ} materially implies \texttt{ψ} at this world
+\end{enumerate}
+
+\textbf{Critical Problem:} This is merely a conjunction—it cannot capture evidential dependence. The reason for \texttt{ψ} might be completely independent of the reason for \texttt{φ}. Lewis's "thereby" requires that the reason for \texttt{ψ} \textit{depends on} the reason for \texttt{φ}.
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+def Ind (i : Agent) (φ ψ : frame.World → Prop) : frame.World → Prop :=
+  fun w => R i φ w ∧ (φ w → ψ w)
+\end{minted}
+\end{minipage}
+
+---
+
+\subsection*{Section 4: Transitive Closure and Common Reason to Believe}
+
+
+Sillari defines common reason to believe via reachability in the Kripke frame. This section develops the machinery for expressing "all worlds reachable by following any sequence of agents' accessibility relations."
+
+
+\subsubsection*{Connected Worlds}
+
+
+\begin{quote}
+\textbf{\texttt{connected w1 w2}} — "Some agent's accessibility relation links \texttt{w1} to \texttt{w2}"
+\end{quote}
+
+
+Two worlds are \textbf{connected} if there exists some agent \texttt{i} such that \texttt{w2} is accessible from \texttt{w1} via \texttt{i}'s relation.
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+def connected (w1 w2 : frame.World) : Prop :=
+  ∃ i, frame.rel i w1 w2
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Transitive Closure}
+
+
+We define the transitive closure of a relation using an inductive type.
+
+
+We use our own definition rather than Mathlib's \texttt{ReflTransGen} because we need transitive but \textit{not} reflexive closure.
+
+
+\textbf{Inductive structure:}
+
+\begin{itemize}
+  \item \texttt{base}: Single step (one edge in the relation)
+  \item \texttt{step}: Prepend a step to an existing path (inductive case)
+\end{itemize}
+
+This allows constructing paths of arbitrary finite length.
+
+
+\textbf{Example:} If we have edges \texttt{x → y → z}, we can construct:
+
+\begin{itemize}
+  \item \texttt{trcl r x y} via \texttt{base}
+  \item \texttt{trcl r y z} via \texttt{base}
+  \item \texttt{trcl r x z} via \texttt{step} (combining the above)
+\end{itemize}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+inductive trcl (r : frame.World → frame.World → Prop) : frame.World → frame.World → Prop
+  | base {x y} : r x y → trcl r x y
+  | step {x y z} : r x y → trcl r y z → trcl r x z
+
+lemma trcl.head {r : frame.World → frame.World → Prop}
+    (h : r x y) (p : trcl r y z) : trcl r x z :=
+  trcl.step h p
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Common Reason to Believe (\texttt{CRB})}
+
+
+\begin{quote}
+\textbf{\texttt{CRB ψ s}} — "There is common reason to believe \texttt{ψ} at world \texttt{s}"
+\end{quote}
+
+
+\textbf{Definition:} \texttt{ψ} holds at all worlds reachable from \texttt{s} via the transitive closure of all agents' accessibility relations.
+
+
+\textbf{Formal definition:}
+
+
+\begin{quote}
+\texttt{CRB ψ s := ∀ w, trcl connected s w → ψ w}
+\end{quote}
+
+
+\textbf{Interpretation:} No matter how you follow the agents' accessibility relations (mixing agents arbitrarily), you always reach worlds where \texttt{ψ} holds.
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+def CRB (ψ : frame.World → Prop) (s : frame.World) : Prop :=
+  ∀ w, trcl (connected : frame.World → frame.World → Prop) s w → ψ w
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Helper Lemmas for Transitive Closure}
+
+
+\begin{itemize}
+  \item Transitive closure is transitive
+\end{itemize}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma trcl_trans {r : frame.World → frame.World → Prop} {x y z : frame.World} :
+    trcl r x y → trcl r y z → trcl r x z := by
+  intro hxy hyz
+  induction hxy with
+  | base hxy => exact trcl.step hxy hyz
+  | step hxy _ ih => exact trcl.step hxy (ih hyz)
+\end{minted}
+\end{minipage}
+
+\begin{itemize}
+  \item Single step inclusion
+\end{itemize}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma trcl_single {r : frame.World → frame.World → Prop} {x y : frame.World}
+    (h : r x y) : trcl r x y :=
+  trcl.base h
+\end{minted}
+\end{minipage}
+
+---
+
+\subsection*{Section 5: Helper Definitions for Counterexamples}
+
+
+To construct our counterexamples, we need to specify simple frame structures. These definitions help us describe frames with a fixed number of worlds and agents.
+
+
+\begin{itemize}
+  \item Two distinct worlds
+\end{itemize}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+def two_worlds : frame.World → frame.World → Prop :=
+  fun w1 w2 => w2 ≠ w1
+\end{minted}
+\end{minipage}
+
+\begin{itemize}
+  \item Three distinct worlds
+\end{itemize}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+def three_worlds : frame.World → frame.World → frame.World → Prop :=
+  fun w1 w2 w3 => w2 ≠ w1 ∧ w3 ≠ w2 ∧ w3 ≠ w1
+\end{minted}
+\end{minipage}
+
+\begin{itemize}
+  \item Two distinct agents
+\end{itemize}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+def two_agents : Agent → Agent → Prop :=
+  fun i1 i2 => i1 ≠ i2 ∧ ∀ i, i = i1 ∨ i = i2
+\end{minted}
+\end{minipage}
+
+---
+
+\subsection*{Section 6: Axiom Analysis}
+
+
+Sillari presents eleven axioms (\texttt{B1}-\texttt{B8}, \texttt{B10}-\texttt{B11}) in a proof-theoretic style, combined with semantic definitions of \texttt{R} and \texttt{Ind} via Kripke frames.
+
+
+We investigate which axioms follow from the semantic definitions and which fail.
+
+
+\subsubsection*{Results Summary}
+
+
+\begin{itemize}
+  \item $\checkmark$ \texttt{B1}, \texttt{B2}, \texttt{B4}, \texttt{B5}, \texttt{B6}: \textbf{PROVABLE} as lemmas from the definitions
+  \item $\times$ \textbf{\texttt{B3}: FAILS} (we provide counterexample) — \textbf{CRITICAL PROBLEM}
+  \item ? \texttt{B7}, \texttt{B8}: Not provable without special frame properties (transitivity, seriality)
+  \item $\checkmark$ \texttt{B9}: Definition of indication
+  \item $\checkmark$ \texttt{B10}, \texttt{B11}: \textbf{PROVABLE}
+\end{itemize}
+
+The failure of \texttt{B3} is a fundamental flaw because \texttt{B3} is Lewis's axiom \texttt{A1}, which is essential to Lewis's entire argument.
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+variable {φ ψ γ : frame.World → Prop}
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Axiom \texttt{B1}: Modal Modus Ponens (K axiom)}
+
+
+If \texttt{i} has reason to believe \texttt{φ}, and \texttt{i} has reason to believe that \texttt{φ} implies \texttt{ψ}, then \texttt{i} has reason to believe \texttt{ψ}.
+
+
+\begin{quote}
+\textbf{Formula:} \texttt{R i φ w → R i (φ ⟶ₘ ψ) w → R i ψ w}
+\end{quote}
+
+
+\begin{description}
+  \item[Status] $\checkmark$ PROVABLE
+\end{description}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma B1 : ∀ w, R i φ w → R i (φ ⟶ₘ ψ) w → R i ψ w := by
+  intros v h1 h2 u h3
+  aesop
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Axiom \texttt{B2}: Formation of Indication}
+
+
+If \texttt{i} has reason to believe \texttt{φ}, and \texttt{φ} materially implies \texttt{ψ} at this world, then \texttt{φ} indicates \texttt{ψ} to \texttt{i}.
+
+
+\begin{quote}
+\textbf{Formula:} \texttt{R i φ w → (φ ⟶ₘ ψ) w → Ind i φ ψ w}
+\end{quote}
+
+
+\begin{description}
+  \item[Status] $\checkmark$ PROVABLE (follows directly from the definition of \texttt{Ind})
+\end{description}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma B2 : ∀ w, R i φ w → (φ ⟶ₘ ψ) w → Ind i φ ψ w := by
+  intro w h1 h2
+  exact ⟨h1, h2⟩
+\end{minted}
+\end{minipage}
+
+---
+
+\subsubsection*{Critical Failure: Axiom \texttt{B3} (Lewis's \texttt{A1})}
+
+
+This is the \textbf{most important negative result}. \texttt{B3} states that if \texttt{i} has reason to believe \texttt{φ}, and \texttt{φ} indicates \texttt{ψ} to \texttt{i}, then \texttt{i} has reason to believe \texttt{ψ}.
+
+
+This is Lewis's "principle of detachment," essential to his entire argument.
+
+
+\begin{quote}
+\textbf{Formula:} \texttt{R i φ w → Ind i φ ψ w → R i ψ w}
+\end{quote}
+
+
+\textbf{Counterexample:} We construct a frame with worlds \texttt{s} and \texttt{t}, where \texttt{i} relates \texttt{s} to \texttt{t} only.
+
+
+\begin{minipage}{\linewidth}
+\textbf{Visual representation:}
+
+
+
+\begin{minted}[fontsize=\small,bgcolor=gray!10]{text}
+Frame Structure:
+┌───┐  rel i  ┌───┐
+│ s │ ──────> │ t │
+└───┘         └───┘
+
+Proposition: φ = "always true"
+┌─────┬─────┬─────┐
+│ w   │  s  │  t  │
+├─────┼─────┼─────┤
+│ φ w │  ✓  │  ✓  │
+└─────┴─────┴─────┘
+
+Target: ψ = "at world s"
+┌─────┬─────┬─────┐
+│ w   │  s  │  t  │
+├─────┼─────┼─────┤
+│ ψ w │  ✓  │  ✗  │
+└─────┴─────┴─────┘
+\end{minted}
+\end{minipage}
+
+
+\textbf{What holds:}
+
+\begin{enumerate}
+  \item \texttt{R i φ s} $\checkmark$ — Agent \texttt{i} has reason to believe \texttt{φ} at world \texttt{s} * Because \texttt{φ} is true at all accessible worlds (only world \texttt{t}, where \texttt{φ t} is true)
+  \item \texttt{Ind i φ ψ s} $\checkmark$ — \texttt{φ} indicates \texttt{ψ} to \texttt{i} at \texttt{s} \textit{ \texttt{R i φ s} $\checkmark$ (shown above) } \texttt{φ s → ψ s} $\checkmark$ (both are true at \texttt{s})
+\end{enumerate}
+
+\textbf{What fails:}
+
+\begin{enumerate}
+  \item \texttt{R i ψ s} $\times$ — Agent \texttt{i} does NOT have reason to believe \texttt{ψ} * Because \texttt{ψ t} is false
+\end{enumerate}
+
+\begin{description}
+  \item[Conclusion] \texttt{B3} fails. We have \texttt{R i φ s ∧ Ind i φ ψ s} but NOT \texttt{R i ψ s}.
+\end{description}
+
+\textbf{Why this matters:} Without \texttt{B3}, you cannot derive common reason to believe from reflexive common indicators. Lewis's entire proof collapses.
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma B3_fails
+    (h2a : ¬ frame.rel i s s)
+    (h2b : frame.rel i s t) :
+    ∃ (w : frame.World) (φ ψ : frame.World → Prop), R i φ w ∧ Ind i φ ψ w ∧ ¬ R i ψ w := by
+  let w := s
+  let ψ := fun w => w ≠ t
+  let φ := fun w => w ≠ s
+  have h4 : R i φ s := by intro v hv; aesop
+  have h5 : Ind i φ ψ s := by rw [Ind]; aesop
+  have h6 : ¬ R i ψ s := by aesop
+  exact ⟨s, φ, ψ, h4, h5, h6⟩
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Axiom \texttt{B4}: Transitivity of indication}
+
+
+\begin{quote}
+\textbf{Formula:} \texttt{Ind i φ γ w → Ind i γ ψ w → Ind i φ ψ w}
+\end{quote}
+
+
+\begin{description}
+  \item[Status] $\checkmark$ PROVABLE
+\end{description}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma B4 : ∀ w, Ind i φ γ w → Ind i γ ψ w → Ind i φ ψ w := by
+  intro w h1 h2
+  constructor
+  { exact h1.1 }
+  { have h4 : φ w → γ w := h1.2
+    have h5 : γ w → ψ w := h2.2
+    intro hw
+    exact h5 (h4 hw) }
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Axiom \texttt{B5}: Modus ponens for valid formulas}
+
+
+\begin{quote}
+\textbf{Formula:} \texttt{(⊢ φ) → (⊢ (φ ⟶ₘ ψ)) → (⊢ ψ)}
+\end{quote}
+
+
+\begin{description}
+  \item[Status] $\checkmark$ PROVABLE
+\end{description}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma B5 : (⊢ φ) → (⊢ (φ ⟶ₘ ψ)) → (⊢ ψ) := by
+  intro h1 h2 w
+  exact h2 w (h1 w)
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Axiom \texttt{B6}: Necessitation rule}
+
+
+If \texttt{φ} indicates \texttt{ψ} to \texttt{i}, and \texttt{ψ} indicates \texttt{γ} to \texttt{i}, then \texttt{φ} indicates \texttt{γ} to \texttt{i}.
+
+
+\begin{quote}
+\textbf{Formula:} \texttt{(⊢ φ) → (⊢ R i φ)}
+\end{quote}
+
+
+\begin{description}
+  \item[Status] $\checkmark$ PROVABLE but implies logical omniscience
+\end{description}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma B6 : (⊢ φ) → (⊢ R i φ) := by
+  intro h1 u v _
+  exact h1 v
+\end{minted}
+\end{minipage}
+
+axiom B7 and axiom B8: Not provable without special frame properties**
+
+
+\begin{itemize}
+  \item B7 (Positive introspection): \texttt{R i φ → R i (R i φ)} Requires transitive accessibility relations
+  \item B8 (Negative introspection): \texttt{¬ R i φ → R i (¬ R i φ)} Requires euclidean accessibility relations
+\end{itemize}
+
+Sillari states these axioms but does not use them in his main argument. We don't discuss them further.
+
+
+(Sillari 2005, p. 388)
+
+
+axiom B9 is just the definition of indication
+
+
+\subsubsection*{Axiom \texttt{B10}: CRB is a fixed-point}
+
+
+\begin{quote}
+\textbf{Formula:} \texttt{⊢ CRB φ ⟶ₘ Rg (φ ∧ₘ CRB φ)}
+\end{quote}
+
+
+\begin{description}
+  \item[Status] $\checkmark$ PROVABLE
+\end{description}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma B10 : ⊢ CRB φ ⟶ₘ Rg (φ ∧ₘ CRB φ) := by
+  intro s hCR i t hst
+  constructor
+  · exact hCR t (trcl_single ⟨i, hst⟩)
+  · intro w htw
+    exact hCR w (trcl_trans (trcl_single ⟨i, hst⟩) htw)
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Axiom \texttt{B11}: CRB is regulated by rule}
+
+
+\begin{quote}
+\textbf{Formula:} \texttt{(⊢ φ ⟶ₘ Rg (ψ ∧ₘ φ)) → ⊢ (φ ⟶ₘ CRB ψ)}
+\end{quote}
+
+
+\begin{description}
+  \item[Status] $\checkmark$ PROVABLE
+\end{description}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma B11 : (⊢ φ ⟶ₘ Rg (ψ ∧ₘ φ)) → ⊢ (φ ⟶ₘ CRB ψ) := by
+  intro hvalid s hφs
+  have propagate : ∀ {x y}, φ x →
+      trcl (connected : frame.World → frame.World → Prop) x y → (ψ y ∧ φ y) := by
+    intro x y hφx hxy
+    induction hxy with
+    | base hconn =>
+        rename_i x y
+        rcases hconn with ⟨j, hj⟩
+        have hRg : Rg (ψ ∧ₘ φ) x := (hvalid x) hφx
+        exact hRg j y hj
+    | step hconn hrest ih =>
+        rename_i x y z
+        rcases hconn with ⟨j, hj⟩
+        have hRg : Rg (ψ ∧ₘ φ) x := (hvalid x) hφx
+        have hy : (ψ ∧ₘ φ) y := hRg j y hj
+        exact ih hy.2
+  intro w hsw
+  exact (propagate hφs hsw).1
+\end{minted}
+\end{minipage}
+
+---
+
+\subsubsection*{Additional Failure: Condition \texttt{C4} (Cubitt-Sugden)}
+
+
+Cubitt and Sugden's condition \texttt{C4} states that if \texttt{A} indicates \texttt{u} to \texttt{i}, then \texttt{i} has reason to believe that \texttt{A} indicates \texttt{u} to \texttt{j}.
+
+
+This formalizes shared reasoning standards—agents know they reason alike.
+
+
+\begin{quote}
+\textbf{Formula:} \texttt{Ind A i u → R i (Ind A j u)}
+\end{quote}
+
+
+\textbf{Counterexample:} We construct a frame with worlds \texttt{s} and \texttt{t}, where:
+
+\begin{itemize}
+  \item At \texttt{s}: \texttt{φ} indicates \texttt{ψ} to \texttt{i}
+  \item Agent \texttt{i} cannot "see" that \texttt{φ} indicates \texttt{ψ} to \texttt{j}
+\end{itemize}
+
+\begin{minipage}{\linewidth}
+\textbf{Visual representation:}
+
+
+
+\begin{minted}[fontsize=\small,bgcolor=gray!10]{text}
+Frame Structure:
+┌───┐  rel i  ┌───┐
+│ s │ ──────> │ t │
+└───┘         └───┘
+ ↺ rel j      (no j-edge from t)
+
+Proposition: φ = "always true"
+┌─────┬─────┬─────┐
+│ w   │  s  │  t  │
+├─────┼─────┼─────┤
+│ φ w │  ✓  │  ✓  │
+└─────┴─────┴─────┘
+
+Target: ψ = "at world s"
+┌─────┬─────┬─────┐
+│ w   │  s  │  t  │
+├─────┼─────┼─────┤
+│ ψ w │  ✓  │  ✗  │
+└─────┴─────┴─────┘
+\end{minted}
+\end{minipage}
+
+
+\textbf{What holds:}
+
+\begin{itemize}
+  \item \texttt{Ind i φ ψ s} $\checkmark$ — \texttt{φ} indicates \texttt{ψ} to \texttt{i} at \texttt{s} \textit{ \texttt{R i φ s} $\checkmark$ (true at all accessible worlds) } \texttt{φ s → ψ s} $\checkmark$ (both true at \texttt{s})
+\end{itemize}
+
+\textbf{What fails:}
+
+\begin{itemize}
+  \item \texttt{R i (Ind j φ ψ) s} $\times$ — \texttt{i} does NOT have reason to believe that \texttt{φ} indicates \texttt{ψ} to \texttt{j} \textit{ At world \texttt{t} (accessible to \texttt{i} from \texttt{s}): \texttt{Ind j φ ψ t} fails } Because \texttt{φ t → ψ t} means \texttt{True → False}, which is \texttt{False} * So \texttt{i} cannot have reason to believe \texttt{Ind j φ ψ} (it fails at accessible world \texttt{t})
+\end{itemize}
+
+\begin{description}
+  \item[Conclusion] \texttt{C4} fails in this Kripke frame.
+\end{description}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma C4_fails
+    (h2a : ¬ frame.rel i s s)
+    (h2b : frame.rel i s t):
+    ∃ (w : frame.World) (φ ψ : frame.World → Prop), (Ind i φ ψ w ∧ ¬ R i (Ind j φ ψ) w) := by
+  let φ := fun _ : frame.World => True
+  let ψ := fun w : frame.World => w = s
+  have h3 : Ind i φ ψ s := by
+    constructor
+    { intro w _; aesop }  -- R i True s (trivial)
+    { aesop }
+  have h3a : ¬ R i (Ind j φ ψ) s := by
+    rw [R]; push_neg; use t
+    constructor
+    · exact h2b
+    · intro hn; have hp : ψ t := hn.2 trivial; aesop
+  exact ⟨s, φ, ψ, h3, h3a⟩
+\end{minted}
+\end{minipage}
+
+---
+
+\subsection*{Section 7: Lewis's Theorem — Two Problematic Interpretations}
+
+
+Sillari's (2005, p. 391) Proposition 4.1 claims to prove Lewis's theorem. However, under local assumptions it's false; under global assumptions it's trivially true.
+
+
+This section presents both interpretations and shows the problems with each.
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+section LewisTheoremCounterexamples
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Option 1: Local Assumptions — FALSE}
+
+
+If conditions \texttt{C1}–\texttt{C3} hold only at the starting world \texttt{s}, Lewis's theorem fails. We provide explicit counterexamples with both one agent and two agents.
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+section LewisTheoremOption1
+\end{minted}
+\end{minipage}
+
+\paragraph{Counterexample with One Agent}
+
+
+We construct a linear chain of three worlds where the target proposition fails at the final world.
+
+
+\begin{minipage}{\linewidth}
+\textbf{Visual representation:}
+
+
+
+\begin{minted}[fontsize=\small,bgcolor=gray!10]{text}
+Frame Structure (Linear Chain):
+
+┌───┐  rel i  ┌───┐  rel i  ┌───┐
+│ s │ ──────> │ u │ ──────> │ v │
+└───┘         └───┘         └───┘
+
+Proposition: φ = "not at s"
+┌─────┬─────┬─────┬─────┐
+│ w   │  s  │  u  │  v  │
+├─────┼─────┼─────┼─────┤
+│ φ w │  ✗  │  ✓  │  ✓  │
+└─────┴─────┴─────┴─────┘
+
+Target: ψ = "at u"
+┌─────┬─────┬─────┬─────┐
+│ w   │  s  │  u  │  v  │
+├─────┼─────┼─────┼─────┤
+│ ψ w │  ✗  │  ✓  │  ✗  │
+└─────┴─────┴─────┴─────┘
+
+Path to Contradiction:
+1. At s: Conditions C1-C3 hold for ψ
+2. Path exists: s →ⁱ u →ⁱ v  (2 steps)
+3. At v: ψ v fails (v ≠ u)
+4. Therefore: CRB ψ s fails
+\end{minted}
+\end{minipage}
+
+
+\textbf{Conclusion:} Conditions hold at \texttt{s} but \texttt{CRB} fails because \texttt{v} is reachable and \texttt{ψ} fails there.
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma Lewis_fails_1i {i1 : Agent}
+    (h3w : three_worlds s u v)
+    (hrel : frame.rel = fun (_ : Agent) (w1 w2 : frame.World) =>
+        (w1 = s ∧ w2 = u) ∨ (w1 = u ∧ w2 = v)) :
+    ∃ φ, R i1 φ s ∧
+      Ind i1 (R i1 φ) (R i1 (R i1 φ)) s ∧
+      Ind i1 (R i1 φ) (R i1 (fun w => w = u)) s ∧
+      ¬ CRB (fun w => w = u) s := by
+  obtain ⟨hsu, hvu, hvs⟩ : u ≠ s ∧ v ≠ u ∧ v ≠ s := by simpa [three_worlds] using h3w
+  let φ : frame.World → Prop := fun w => w ≠ s
+  let ψ : frame.World → Prop := fun w => w = u
+
+  have rel_s_u : frame.rel i1 s u := by aesop
+  have rel_u_v : frame.rel i1 u v := by aesop
+  have succ_s_eq_u : ∀ w, frame.rel i1 s w → w = u := by intro w hw; aesop
+  have succ_u_eq_v : ∀ x, frame.rel i1 u x → x = v := by
+    intro x hx
+    have hx' : (u = s ∧ x = u) ∨ (u = u ∧ x = v) := by simpa [hrel] using hx
+    cases hx' with
+    | inl h => exact (hsu h.1).elim
+    | inr h => exact h.2
+
+  have hRphi_s : R i1 φ s := by
+    intro w hw
+    have : w = u := succ_s_eq_u w hw
+    simpa [φ, this] using hsu
+
+  have hR_Rphi_s : R i1 (R i1 φ) s := by
+    intro w hw x hx
+    have hw_u : w = u := by aesop
+    have hx_v : x = v := by aesop
+    simpa [φ, hx_v] using hvs
+
+  have hInd1 : Ind i1 (R i1 φ) (R i1 (R i1 φ)) s := ⟨hR_Rphi_s, fun _ => hR_Rphi_s⟩
+  have hRpsi_s : R i1 ψ s := by intro w hw; aesop
+  have hInd2 : Ind i1 (R i1 φ) (R i1 ψ) s := ⟨hR_Rphi_s, fun _ => hRpsi_s⟩
+
+  have hNotCR : ¬ CRB (fun w => w = u) s := by
+    intro hCR
+    have hsu_path : trcl connected s u := trcl_single ⟨i1, rel_s_u⟩
+    have huv_path : trcl connected u v := trcl_single ⟨i1, rel_u_v⟩
+    have hsv : trcl connected s v := trcl_trans hsu_path huv_path
+    have : v = u := hCR v hsv
+    exact hvu this
+
+  exact ⟨φ, hRphi_s, hInd1, hInd2, hNotCR⟩
+\end{minted}
+\end{minipage}
+
+\paragraph{Counterexample with Two Agents}
+
+
+This shows the problem persists with multiple agents and richer frame properties.
+
+
+\begin{minipage}{\linewidth}
+\textbf{Visual representation:}
+
+
+
+\begin{minted}[fontsize=\small,bgcolor=gray!10]{text}
+Frame Structure (Two Agents):
+
+     i₁         i₁
+s ─────→ u ─────→ u  (i₁ transitive at u)
+│         │
+│ i₂      │ i₂
+↓         ↓
+s         v ←───── v  (reflexive at v for both)
+
+Simplified view of reachability:
+┌───┐  i₁  ┌───┐  i₂  ┌───┐
+│ s │ ───> │ u │ ───> │ v │
+└───┘      └───┘      └───┘
+  ↺ i₂              ↺ i₁,i₂
+
+Proposition: ψ = "not at v"
+┌─────┬─────┬─────┬─────┐
+│ w   │  s  │  u  │  v  │
+├─────┼─────┼─────┼─────┤
+│ ψ w │  ✓  │  ✓  │  ✗  │
+└─────┴─────┴─────┴─────┘
+
+Mixed-Agent Path:
+s →^i₁ u →^i₂ v
+
+What fails: ψ v = (v ≠ v) is false
+\end{minted}
+\end{minipage}
+
+
+\textbf{Conclusion:} Even with multiple agents, conditions at \texttt{s} don't guarantee \texttt{CRB} when different agents' relations can be chained to reach counterexample worlds.
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma Lewis_fails_2i {i1 i2 : Agent}
+    (h1 : three_worlds s u v)
+    (h2 : two_agents i1 i2)
+    (h3 : frame.rel = fun i w1 w2 =>
+      (i = i1 ∧ w1 = s ∧ w2 = u) ∨
+      (i = i1 ∧ w1 = u ∧ w2 = u) ∨
+      (w1 = v ∧ w2 = v) ∨
+      (i = i2 ∧ w1 = s ∧ w2 = s) ∨
+      (i = i2 ∧ w1 = u ∧ w2 = v)) :
+    ¬ ∀ (i : Agent) (φ ψ : frame.World → Prop),
+        Rg φ s → Ind i (Rg φ) (Rg (Rg φ)) s → Ind i (Rg φ) (Rg ψ) s → CRB ψ s := by
+  rw [two_agents] at h2
+  rw [three_worlds] at h1
+  let φ : frame.World → Prop := fun _ => True
+  let ψ : frame.World → Prop := fun w => w ≠ v
+
+  push_neg
+  use i1, φ, ψ
+
+  have h41 : Rg φ s := by intro i w; aesop
+  have h42a : Rg (Rg φ) s := by intro i x _ w hw; aesop
+  have h42 : Ind i1 (Rg φ) (Rg (Rg φ)) s := ⟨h42a i1, fun _ => h42a⟩
+  have h43 : Ind i1 (Rg φ) (Rg ψ) s := ⟨h42a i1, fun _ i w => by aesop⟩
+
+  have h44 : ¬ CRB ψ s := by
+    rw [CRB]; push_neg; use v
+    constructor
+    · have h5a : connected s u := ⟨i1, by aesop⟩
+      have h5b : connected u v := ⟨i2, by aesop⟩
+      exact trcl.head h5a (trcl_single h5b)
+    · aesop
+
+  aesop
+
+end LewisTheoremOption1
+\end{minted}
+\end{minipage}
+
+\subsubsection*{Option 2: Global Assumptions — TRIVIALLY TRUE}
+
+
+If conditions \texttt{C1}-\texttt{C3} hold at \textit{all} worlds (not just at the starting world), Lewis's theorem becomes provable but philosophically empty.
+
+
+\textbf{Why it's trivial:} If \texttt{Rg ψ} holds at all worlds, then of course \texttt{ψ} holds at all reachable worlds. But this assumption is much stronger than what Lewis needs, and it makes the theorem vacuous.
+
+
+\begin{description}
+  \item[Note] Condition \texttt{C2} is completely unused in this proof!
+\end{description}
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+section LewisTheoremOption2
+\end{minted}
+\end{minipage}
+
+\paragraph{Lewis's Theorem (Trivial Global Version)}
+
+
+\begin{quote}
+If \texttt{Rg φ} holds at all worlds, and \texttt{Ind i (Rg φ) (Rg ψ)} holds at all worlds, then \texttt{CRB ψ s} holds.
+\end{quote}
+
+
+\begin{description}
+  \item[Status] $\checkmark$ TRUE but ⚠ vacuous
+  \item[Observation] The proof never uses condition \texttt{C2}. This suggests the theorem
+\end{description}
+
+statement is not correctly capturing Lewis's requirements.
+
+
+\begin{minipage}{\linewidth}
+\begin{minted}{lean4}
+lemma Lewis_s_2
+    (C1 : ∀ w, Rg φ w)
+    (C3 : ∀ w, Ind i (Rg φ) (Rg ψ) w) :
+    CRB ψ s := by
+  have hRgψ_all : ∀ w, Rg ψ w := fun w => (C3 w).2 (C1 w)
+  intro v hv
+  induction hv with
+  | base h_edge =>
+      rcases h_edge with ⟨j, hj⟩
+      exact (hRgψ_all _) j _ hj
+  | step _ _ ih => exact ih
+
+end LewisTheoremOption2
+
+end LewisTheoremCounterexamples
+
+end Sillari
+\end{minted}
+\end{minipage}
+
+---
+
+\subsection*{Section 8: Summary and Assessment}
+
+
+\subsubsection*{What We Proved}
+
+
+This file demonstrates four fundamental problems with Sillari's approach:
+
+
+\begin{enumerate}
+  \item \textbf{\texttt{B3} (\texttt{A1}) fails} — Lewis's principle of detachment does not hold
+  \item \textbf{\texttt{C4} fails} — Shared standards axiom does not hold
+  \item \textbf{Lewis's theorem fails locally} — Counterexamples with 1 and 2 agents
+  \item \textbf{Lewis's theorem is trivial globally} — Proof doesn't use \texttt{C2}, reduces to tautology
+\end{enumerate}
+
+\subsubsection*{The Root Cause}
+
+
+Modal logic tracks \textbf{that} agents believe propositions, not \textbf{how} beliefs are justified. Lewis's notion of indication requires evidential dependence—the reason for the conclusion must depend on the reason for the premise.
+
+
+Sillari's definition:
+
+
+\begin{quote}
+\texttt{Ind i φ ψ := R i φ ∧ (φ → ψ)}
+\end{quote}
+
+
+is a conjunction that cannot capture this dependence. The reason for \texttt{ψ} might come from a completely different source than the reason for \texttt{φ}.
+
+
+\subsubsection*{Philosophical Lessons}
+
+
+\begin{enumerate}
+  \item \textbf{Framework choice matters} — Modal logic is the wrong tool for Lewis's theory
+  \item \textbf{Formal verification catches subtle errors} — The proof gap in Proposition 4.1 is now explicit
+  \item \textbf{Definitions encode commitments} — Small definitional choices have large consequences
+  \item \textbf{Negative results are valuable} — They clarify the problem space and motivate better solutions
+\end{enumerate}
+
+\subsubsection*{The Problem with Modal Box}
+
+
+The modal operator \texttt{□ᵢ} (our \texttt{R i}) treats "reason to believe" as a black box:
+
+
+\begin{itemize}
+  \item \texttt{R i φ} means "φ holds at all worlds \texttt{i} considers possible"
+  \item But it doesn't tell us \textbf{why} \texttt{i} has this reason
+  \item It doesn't track the \textbf{evidential structure} of reasoning
+\end{itemize}
+
+When we try to compose reasons (\texttt{A} gives reason for \texttt{B}, \texttt{B} gives reason for \texttt{C}), modal logic cannot verify that the reason for \texttt{C} actually depends on the reason for \texttt{A} through \texttt{B}.
+
+
+\subsubsection*{The Solution: Justification Logic}
+
+
+Vromen (2024) uses justification logic with explicit reason terms:
+
+
+\begin{quote}
+\texttt{R i φ := ∃r. rb r i φ}
+\end{quote}
+
+
+(There exists an explicit reason \texttt{r} such that \texttt{r} is a reason for \texttt{i} to believe \texttt{φ})
+
+
+\begin{quote}
+\texttt{Ind A i φ := R i (A → φ)}
+\end{quote}
+
+
+(\texttt{i} has reason to believe the implication from \texttt{A} to \texttt{φ})
+
+
+This captures "thereby": when combined with a reason for \texttt{A} via the application rule \texttt{t:(A → φ) → s:A → (t·s):φ}, the resulting reason for \texttt{φ} explicitly contains the reason for \texttt{A}.
+
+
+\begin{description}
+  \item[Key insight] The compositional structure of reason terms enforces evidential
+\end{description}
+
+dependence at the syntactic level.
+
+
+\subsubsection*{Achievements of This File}
+
+
+\begin{itemize}
+  \item $\checkmark$ Machine-verified counterexamples to Sillari's key axioms
+  \item $\checkmark$ Explicit demonstration of where modal logic fails
+  \item $\checkmark$ Clear explanation of the "thereby" problem
+  \item $\checkmark$ Motivation for justification logic approach
+\end{itemize}
+
+\subsubsection*{Recommendation}
+
+
+\begin{itemize}
+  \item For what \textbf{doesn't work} → \texttt{this file}
+  \item For the \textbf{structure} of Lewis's argument → \texttt{Cubitt\_Sugden\_baseline.lean}
+  \item For the correct \textbf{foundations} → \texttt{Vromen\_justification\_logic.lean}
+\end{itemize}
+
+
+\end{document}
