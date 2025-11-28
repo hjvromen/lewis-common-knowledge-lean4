@@ -1,7 +1,9 @@
-# Lean build artifacts
+# Lean build artifacts and other directories
 /.lake/
 /build/
 /lake-packages/
+/paper_drafts
+/archief
 
 # VS Code
 /.vscode/
