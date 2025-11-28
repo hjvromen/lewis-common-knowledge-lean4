@@ -17,6 +17,7 @@
 *.bak
 *.swp
 *.swo
+*.backup
 
 # Compilation output
 *.olean
