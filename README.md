@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Lean 4](https://img.shields.io/badge/Lean-4.13.0-blue.svg)](https://leanprover.github.io/lean4/doc/)
 
+[![Build Status](https://github.com/hjvromen/lewis-common-knowledge-lean4/actions/workflows/lean.yml/badge.svg)](https://github.com/hjvromen/lewis-common-knowledge-lean4/actions)
+
 This repository contains machine-verified formalizations of three approaches to David Lewis's theory of common knowledge, fully implemented in Lean 4. The project accompanies the paper:
 
 **Vromen, H. (2024). Reasoning with reasons: Lewis on common knowledge. *Economics & Philosophy*, 40(2), 397–418.** 
