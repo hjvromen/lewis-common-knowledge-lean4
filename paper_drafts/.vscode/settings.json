@@ -1,0 +1,59 @@
+{
+  // Auto-compile on save
+  "latex-workshop.latex.autoBuild.run": "onSave",
+
+  // Use XeLaTeX and Biber
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "XeLaTeX → Biber → XeLaTeX ×2 + Clean",
+      "tools": ["xelatex", "biber", "xelatex", "xelatex", "clean"]
+    },
+    {
+      "name": "XeLaTeX only",
+      "tools": ["xelatex"]
+    }
+  ],
+
+  // Define tools
+  "latex-workshop.latex.tools": [
+    {
+      "name": "xelatex",
+      "command": "xelatex",
+      "args": [
+        "-synctex=1",
+        "-interaction=nonstopmode",
+        "-file-line-error",
+        "-output-directory=out",
+        "%DOC%"
+      ]
+    },
+    {
+      "name": "biber",
+      "command": "biber",
+      "args": ["%DOCFILE%"]
+    },
+    {
+      "name": "clean",
+      "command": "latexmk",
+      "args": [
+        "-c",
+        "-outdir=out"
+      ]
+    }
+  ],
+
+  // Default recipe
+  "latex-workshop.latex.recipe.default": "XeLaTeX → Biber → XeLaTeX ×2 + Clean",
+
+  // Where to place auxiliary files
+  "latex-workshop.latex.outDir": "./out",
+
+  // Open the PDF inside VS Code
+  "latex-workshop.view.pdf.viewer": "tab",
+
+  // Optional UX enhancements
+  "editor.fontLigatures": true,
+  "editor.wordWrap": "on",
+  "cSpell.enabled": true,
+  "cSpell.language": "en"
+}

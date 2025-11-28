@@ -20,9 +20,6 @@
 *.olean
 *.trace
 
-# Lake lock file (may want to commit this in some cases)
-lake-manifest.json
-
 # LaTeX files
 *.tex
 *.aux
