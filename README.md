@@ -1,12 +1,13 @@
 # Formalizing Lewis's Theory of Common Knowledge in Lean 4
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
+[![DOI](https://zenodo.org/badge/1105929111.svg)](https://doi.org/10.5281/zenodo.17759320)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Lean 4](https://img.shields.io/badge/Lean-4.13.0-blue.svg)](https://leanprover.github.io/lean4/doc/)
+[![Lean 4](https://img.shields.io/badge/Lean-4.26.0--rc2-blue.svg)](https://leanprover.github.io/lean4/doc/)
 
 [![Build Status](https://github.com/hjvromen/lewis-common-knowledge-lean4/actions/workflows/lean.yml/badge.svg)](https://github.com/hjvromen/lewis-common-knowledge-lean4/actions)
 
-This repository contains machine-verified formalizations of three approaches to David Lewis's theory of common knowledge, fully implemented in Lean 4. The project accompanies the paper:
+This repository contains machine-verified formalizations of three approaches to David Lewis's theory of common knowledge, fully implemented in Lean 4. The project builds on the paper:
 
 **Vromen, H. (2024). Reasoning with reasons: Lewis on common knowledge. *Economics & Philosophy*, 40(2), 397–418.** 
 [DOI: 10.1017/S0266267123000238](https://doi.org/10.1017/S0266267123000238)
