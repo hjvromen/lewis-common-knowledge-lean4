@@ -53,8 +53,6 @@ All proofs are fully formalized and verified in Lean 4 with **zero `sorry` state
     └── DOI_GUIDE.md                   # How to get a DOI via Zenodo
 ```
 
-> **Note:** After publishing, update the DOI badge at the top by following [`docs/DOI_GUIDE.md`](docs/DOI_GUIDE.md).
-
 ## Quick Start
 
 ### Prerequisites
@@ -159,10 +157,9 @@ If you use this formalization in your research, please cite:
 @software{vromen2025lean,
   title={Formalizing Lewis's Theory of Common Knowledge in Lean 4},
   author={Vromen, Huub},
-  year={2024},
-  doi={10.5281/zenodo.XXXXXXX},
+  year={2025},
+  doi={10.5281/zenodo.17759320},
   url={https://github.com/hjvromen/lewis-common-knowledge-lean4},
-  note={Replace XXXXXXX with actual Zenodo DOI after first release}
 }
 ```
 
