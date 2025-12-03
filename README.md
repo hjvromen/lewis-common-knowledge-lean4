@@ -36,10 +36,14 @@ All proofs are fully formalized and verified in Lean 4 with **zero `sorry` state
 .
 ├── README.md                          # This file
 ├── LICENSE                            # MIT License
-├── lakefile.lean                      # Lean project configuration
+├── CONTRIBUTING                       # Way to contribute
+├── setup.sh                           # Setup instructions
+├── .gitignore                         # Files and folders excluded
+├── lake-manifest.json                 # Locked dependency versions
 ├── lean-toolchain                     # Lean version specification
-├── Sillari_refutation.lean            # Modal logic counterexamples
+├── Lewis.lean                         # Library root file (required by Lake)
 ├── Cubitt_Sugden_baseline.lean        # Syntactic reconstruction
+├── Sillari_refutation.lean            # Modal logic counterexamples
 ├── Vromen_justification_logic.lean    # Justification logic solution
 ├── pdfs/
 │   ├── sillari_refutation.pdf         # PDF version of the Lean file
@@ -49,8 +53,7 @@ All proofs are fully formalized and verified in Lean 4 with **zero `sorry` state
 └── docs/
     ├── GUIDE.md                       # Detailed reading guide
     ├── PROJECT_SUMMARY.md             # Technical overview
-    ├── VISUAL_OVERVIEW.md             # Visual diagrams
-    └── DOI_GUIDE.md                   # How to get a DOI via Zenodo
+
 ```
 
 ## Quick Start

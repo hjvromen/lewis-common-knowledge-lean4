@@ -1,1 +1,5 @@
-def hello := "world"
+-- This file is required by lakefile.lean but contains no definitions.
+-- The actual formalizations are in:
+--   - Cubitt_Sugden_baseline.lean
+--   - Sillari_refutation.lean
+--   - Vromen_justification_logic.lean
